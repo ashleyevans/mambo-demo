@@ -37,7 +37,7 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->unique(['bank_account_id', 'truelayer_transaction_id']);
+            $table->unique(['bank_account_id', 'truelayer_transaction_id'], 'bank_transactions_account_tl_txn_unique');
             $table->index(['user_id', 'booked_at']);
         });
     }
