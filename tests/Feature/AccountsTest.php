@@ -108,6 +108,7 @@ test('the callback exchanges the code and stores accounts', function () {
     $this->assertDatabaseHas('bank_connections', [
         'user_id' => $user->id,
         'provider_name' => 'Mock Bank',
+        'psu_ip' => '127.0.0.1',
     ]);
     $this->assertDatabaseHas('bank_accounts', [
         'user_id' => $user->id,

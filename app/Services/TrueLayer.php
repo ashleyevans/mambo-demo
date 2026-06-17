@@ -81,9 +81,9 @@ class TrueLayer
      *
      * @throws ConnectionException
      */
-    public function accounts(string $accessToken): array
+    public function accounts(string $accessToken, ?string $psuIp = null): array
     {
-        return $this->fetchResults($accessToken, $this->apiBaseUrl().'/data/v1/accounts');
+        return $this->fetchResults($accessToken, $this->apiBaseUrl().'/data/v1/accounts', $psuIp);
     }
 
     /**
@@ -93,9 +93,9 @@ class TrueLayer
      *
      * @throws ConnectionException
      */
-    public function balance(string $accessToken, string $accountId): ?array
+    public function balance(string $accessToken, string $accountId, ?string $psuIp = null): ?array
     {
-        return $this->fetchResults($accessToken, $this->apiBaseUrl()."/data/v1/accounts/{$accountId}/balance")[0] ?? null;
+        return $this->fetchResults($accessToken, $this->apiBaseUrl()."/data/v1/accounts/{$accountId}/balance", $psuIp)[0] ?? null;
     }
 
     /**
@@ -105,9 +105,9 @@ class TrueLayer
      *
      * @throws ConnectionException
      */
-    public function transactions(string $accessToken, string $accountId): array
+    public function transactions(string $accessToken, string $accountId, ?string $psuIp = null): array
     {
-        return $this->fetchResults($accessToken, $this->apiBaseUrl()."/data/v1/accounts/{$accountId}/transactions");
+        return $this->fetchResults($accessToken, $this->apiBaseUrl()."/data/v1/accounts/{$accountId}/transactions", $psuIp);
     }
 
     /**
@@ -117,9 +117,9 @@ class TrueLayer
      *
      * @throws ConnectionException
      */
-    public function pendingTransactions(string $accessToken, string $accountId): array
+    public function pendingTransactions(string $accessToken, string $accountId, ?string $psuIp = null): array
     {
-        return $this->fetchResults($accessToken, $this->apiBaseUrl()."/data/v1/accounts/{$accountId}/transactions/pending");
+        return $this->fetchResults($accessToken, $this->apiBaseUrl()."/data/v1/accounts/{$accountId}/transactions/pending", $psuIp);
     }
 
     /**
@@ -129,16 +129,21 @@ class TrueLayer
      * the data is still being fetched from the bank we poll briefly; a Failed
      * status raises so the sync reports it.
      *
+     * When a PSU IP is supplied it is sent as the `X-PSU-IP` header, signalling
+     * a customer-present request to access TrueLayer's higher rate limit.
+     *
      * @return array<int, array<string, mixed>>
      *
      * @throws ConnectionException
      */
-    private function fetchResults(string $accessToken, string $url): array
+    private function fetchResults(string $accessToken, string $url, ?string $psuIp = null): array
     {
+        $headers = $psuIp !== null ? ['X-PSU-IP' => $psuIp] : [];
+
         $body = [];
 
         for ($attempt = 0; $attempt < 4; $attempt++) {
-            $body = Http::withToken($accessToken)->get($url)->throw()->json();
+            $body = Http::withToken($accessToken)->withHeaders($headers)->get($url)->throw()->json();
 
             $status = $body['status'] ?? 'Succeeded';
 

@@ -27,11 +27,16 @@ class SyncBankConnections extends Command
 
         $this->info("Syncing {$connections->count()} connection(s)...");
 
+        // In demo mode we forward the stored PSU IP as customer-present to lift
+        // TrueLayer's background AIS rate limit. Normal polling stays within the
+        // background allowance (see the 6-hourly schedule).
+        $customerPresent = (bool) $this->option('demo');
+
         $failures = 0;
 
         foreach ($connections as $connection) {
             try {
-                $syncConnection($connection);
+                $syncConnection($connection, $customerPresent);
             } catch (\Throwable $e) {
                 $failures++;
                 report($e);

@@ -80,6 +80,7 @@ class AccountController extends Controller
                     : null,
                 'consent_expires_at' => Carbon::now()->addDays((int) config('services.truelayer.consent_days', 90)),
                 'status' => 'active',
+                'psu_ip' => $request->ip(),
             ]);
 
             ($this->syncConnection)($connection);

@@ -153,6 +153,28 @@ test('a user can toggle demo refresh on and off', function () {
     expect($user->fresh()->demo_refresh)->toBeFalse();
 });
 
+test('enabling demo refresh captures the request IP onto bank connections', function () {
+    $user = User::factory()->create(['demo_refresh' => false]);
+    $connection = BankConnection::factory()->for($user)->create(['psu_ip' => null]);
+
+    $this->actingAs($user)
+        ->patch(route('dashboard.demo-refresh'), ['demo_refresh' => true], ['REMOTE_ADDR' => '198.51.100.22'])
+        ->assertRedirect();
+
+    expect($connection->fresh()->psu_ip)->toBe('198.51.100.22');
+});
+
+test('disabling demo refresh leaves the stored IP untouched', function () {
+    $user = User::factory()->create(['demo_refresh' => true]);
+    $connection = BankConnection::factory()->for($user)->create(['psu_ip' => '203.0.113.7']);
+
+    $this->actingAs($user)
+        ->patch(route('dashboard.demo-refresh'), ['demo_refresh' => false], ['REMOTE_ADDR' => '198.51.100.22'])
+        ->assertRedirect();
+
+    expect($connection->fresh()->psu_ip)->toBe('203.0.113.7');
+});
+
 test('the sync endpoint pulls fresh data for the users connections', function () {
     config()->set('services.truelayer.client_id', 'test-client');
     config()->set('services.truelayer.client_secret', 'test-secret');

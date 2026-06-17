@@ -20,12 +20,17 @@ class SyncBankConnection
 
     /**
      * Refresh the access token if needed, then pull the latest accounts and balances.
+     *
+     * Passing $customerPresent forwards the connection's stored PSU IP as
+     * X-PSU-IP, used by demo-mode background syncs to lift the AIS rate limit.
      */
-    public function __invoke(BankConnection $connection): void
+    public function __invoke(BankConnection $connection, bool $customerPresent = false): void
     {
+        $psuIp = $customerPresent ? $connection->psu_ip : null;
+
         $accessToken = $this->freshAccessToken($connection);
 
-        $accounts = $this->trueLayer->accounts($accessToken);
+        $accounts = $this->trueLayer->accounts($accessToken, $psuIp);
 
         $provider = $accounts[0]['provider'] ?? [];
 
@@ -40,7 +45,7 @@ class SyncBankConnection
         $newTransactions = [];
 
         foreach ($accounts as $account) {
-            $balance = $this->trueLayer->balance($accessToken, $account['account_id']);
+            $balance = $this->trueLayer->balance($accessToken, $account['account_id'], $psuIp);
 
             $accountModel = $connection->accounts()->updateOrCreate([
                 'truelayer_account_id' => $account['account_id'],
@@ -60,7 +65,7 @@ class SyncBankConnection
             try {
                 $newTransactions = array_merge(
                     $newTransactions,
-                    $this->syncTransactions($accountModel, $accessToken),
+                    $this->syncTransactions($accountModel, $accessToken, $psuIp),
                 );
             } catch (\Throwable $e) {
                 // A connection consented before the `transactions` scope was granted
@@ -77,13 +82,13 @@ class SyncBankConnection
      *
      * @return array<int, BankTransaction> Transactions created during this sync.
      */
-    private function syncTransactions(BankAccount $account, string $accessToken): array
+    private function syncTransactions(BankAccount $account, string $accessToken, ?string $psuIp = null): array
     {
         $created = [];
 
         // Settled transactions first: if a previously pending transaction has
         // settled under the same id, this flips its status before cleanup.
-        foreach ($this->trueLayer->transactions($accessToken, $account->truelayer_account_id) as $transaction) {
+        foreach ($this->trueLayer->transactions($accessToken, $account->truelayer_account_id, $psuIp) as $transaction) {
             $model = $this->upsertTransaction($account, $transaction, 'settled');
 
             if ($model->wasRecentlyCreated) {
@@ -94,7 +99,7 @@ class SyncBankConnection
         // Pending transactions (e.g. a card payment that settles later in the day).
         $pendingIds = [];
 
-        foreach ($this->trueLayer->pendingTransactions($accessToken, $account->truelayer_account_id) as $transaction) {
+        foreach ($this->trueLayer->pendingTransactions($accessToken, $account->truelayer_account_id, $psuIp) as $transaction) {
             $pendingIds[] = $transaction['transaction_id'];
             $model = $this->upsertTransaction($account, $transaction, 'pending');
 

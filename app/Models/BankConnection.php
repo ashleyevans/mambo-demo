@@ -23,11 +23,12 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $token_expires_at
  * @property Carbon|null $consent_expires_at
  * @property string $status
+ * @property string|null $psu_ip
  * @property Carbon|null $last_synced_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'provider_id', 'provider_name', 'logo_uri', 'access_token', 'refresh_token', 'token_expires_at', 'consent_expires_at', 'status', 'last_synced_at'])]
+#[Fillable(['user_id', 'provider_id', 'provider_name', 'logo_uri', 'access_token', 'refresh_token', 'token_expires_at', 'consent_expires_at', 'status', 'psu_ip', 'last_synced_at'])]
 #[Hidden(['access_token', 'refresh_token'])]
 class BankConnection extends Model
 {

@@ -54,6 +54,12 @@ class DashboardController extends Controller
 
         $request->user()->update(['demo_refresh' => $validated['demo_refresh']]);
 
+        // Capture the present customer's IP so demo-mode background syncs can
+        // forward it as X-PSU-IP, without needing to reconnect the banks.
+        if ($validated['demo_refresh']) {
+            $request->user()->bankConnections()->update(['psu_ip' => $request->ip()]);
+        }
+
         return back();
     }
 
